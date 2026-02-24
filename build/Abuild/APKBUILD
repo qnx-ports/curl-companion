@@ -1,0 +1,62 @@
+pkgname=curl
+pkgver=8.15.0
+pkgrel=2
+pkgdesc="command line tool and library for transferring data with URLs"
+url="https://curl.se"
+arch="all"
+license="MIT"
+depends="libcurl libssl3 nghttp2 zlib-ng zstd brotli libpsl qnx-io-sock"
+depends_dev="openssl-dev nghttp2-dev zlib-ng-dev zstd-dev brotli-dev libidn2-dev libpsl-dev qnx-io-sock-dev"
+makedepends="$depends_dev perl nproc"
+checkdepends="python3"
+subpackages="$pkgname-static $pkgname-doc $pkgname-dev libcurl"
+source="https://curl.se/download/curl-$pkgver.tar.xz"
+
+build() {
+    ./configure \
+        --build="$CBUILD" \
+        --host="$CHOST" \
+        --prefix=/usr \
+        --enable-manual \
+        --enable-static \
+        --enable-ipv6 \
+        --enable-threaded-resolver \
+        --enable-websockets \
+        --with-openssl \
+        --with-libpsl \
+        --disable-ldap \
+        --disable-ldaps \
+        --with-ca-bundle='/etc/ssl/certs/ca-certificates.crt' \
+        --with-ca-fallback
+   make
+}
+
+check() {
+    cd tests
+
+    make
+    ./runtests.pl -j$(nproc)
+    #./runtests.pl | START_DIR=$startdir $startdir/parse_tests.py
+}
+
+package() {
+    # depends on exactly the same build of libcurl
+    depends="libcurl=$pkgver-r$pkgrel"
+
+    make DESTDIR="$pkgdir" install
+}
+
+libcurl() {
+    pkgdesc="The multiprotocol file transfer library"
+    amove usr/lib
+}
+
+dev() {
+    default_dev
+    # Used by trurl
+    install -Dm755 -t "$subpkgdir"/usr/bin "$builddir"/scripts/cd2nroff
+}
+
+sha512sums="
+d27e316d70973906ac4b8d2c280f7e99b7528966aa1220c13a38ed45fca2ed6bbde54b8a9d7bed9e283171b92edb621f7b95162ef7d392e6383b0ee469de3191  curl-8.15.0.tar.xz
+"
